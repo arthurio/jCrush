@@ -28,7 +28,7 @@
             function getSelection() {
                 return {x: x, y: y, w: w, h: h};
             }
-            
+
             function setSelection(box) {
                 x = box[0];
                 y = box[1];
@@ -48,7 +48,7 @@
             function getSelectionOrigin() {
                 return [x, y];
             }
-            
+
             function setSelectionOrigin(pos) {
                 x = pos[0];
                 y = pos[1];
@@ -81,11 +81,14 @@
                options.onRelease = function () {};
             }
 
+            var width = image_w >= options.selectionWidth ? options.selectionWidth : image_w,
+                height = image_h >= options.selectionHeight ? options.selectionHeight : image_h;
+
             Coords.setSelection([
                     options.selectionOriginX,
                     options.selectionOriginY,
-                    options.selectionWidth,
-                    options.selectionHeight
+                    width,
+                    height
             ]);
 
             options.crushID = parseInt(Math.random()*1000000, 10);
@@ -104,7 +107,6 @@
 
         $origimg = $(obj);
 
-        
         function ready() {
             // set the options
             setOptions(opt);
@@ -119,7 +121,7 @@
             img = new Image();
             $img = $(img);
             $img.load(function () {
-                // Unbind to stop 
+                // Unbind to stop
                 $img.unbind();
 
                 // save the dimensions of the image
@@ -138,11 +140,11 @@
         }
 
         cloneImage();
-        
+
         function moveImage(x, y) {
             var size = Coords.getSelectionSize(),
-                frame_x = image_w - size[0],
-                frame_y = image_h - size[1];
+                frame_x = image_w >= size[0] ? image_w - size[0] : 0,
+                frame_y = image_h >= size[1] ? image_h - size[1] : 0;
             Coords.setSelectionOrigin([x, y]);
             $img.css('left', px(frame_x - x));
             $img.css('top', px(frame_y - y));
@@ -152,31 +154,37 @@
 
             var size = Coords.getSelectionSize(),
                 origin = Coords.getSelectionOrigin(),
-                frame_x = image_w - size[0],
-                frame_y = image_h - size[1],
+                frame_x = image_w - options.selectionWidth,
+                frame_y = image_h - options.selectionHeight,
+                width = image_w >= options.selectionWidth ? image_w : options.selectionWidth,
+                height = image_h >= options.selectionHeight ? image_h : options.selectionHeight,
+                position_left = image_w >= options.selectionWidth ? frame_x : frame_x/2,
+                position_top = image_h >= options.selectionHeight ? frame_y : frame_y/2,
                 image_classes = $img.attr('class');
 
             $wrapper = $(document.createElement('div'));
             $wrapper.attr('id', 'crush_wrapper' + options.crushID);
+            $wrapper.attr('class', 'crush_wrapper');
             $wrapper.css('position', 'absolute');
-            $wrapper.width(image_w + frame_x);
-            $wrapper.height(image_h + frame_y);
+            $wrapper.width(width + frame_x);
+            $wrapper.height(height + frame_y);
             $wrapper.css('cursor', options.cursor);
-            $wrapper.css('clip', 'rect(' + px(frame_y)+ ',' + px(image_w) + ',' + px(image_h) + ',' + px(frame_x) + ')');
-            $wrapper.css('left', '-' + px(frame_x));
-            $wrapper.css('top', '-' + px(frame_y));
+            $wrapper.css('clip', 'rect(' + px(frame_y)+ ',' + px(width) + ',' + px(height) + ',' + px(frame_x) + ')');
+            $wrapper.css('left', px(-position_left));
+            $wrapper.css('top', px(-position_top));
 
             $anchor = $(document.createElement('div'));
             $anchor.attr('id', options.anchor + options.crushID);
+            $anchor.addClass('crush_container');
             $anchor.addClass(image_classes);
             $anchor.css('position', 'relative');
             $anchor.css('overflow', 'hidden');
-            $anchor.css('width', px(size[0]));
-            $anchor.css('height', px(size[1]));
+            $anchor.css('width', px(options.selectionWidth));
+            $anchor.css('height', px(options.selectionHeight));
             $anchor.css('display', 'block');
             $anchor.append($wrapper);
 
-            // remove all the style on the image and move it to the 
+            // remove all the style on the image and move it
             $img.attr('class', '');
             moveImage(origin[0], origin[1]);
 
@@ -188,9 +196,9 @@
                 // for top and left size[A] - B : B represent height of the hit + padding
                 $hint.css('position', 'absolute')
                     // 80 represents the width of the hint + padding
-                    .css('left', px(frame_x + ((size[0] - 80) / 2)))
+                    .css('left', px(position_left + ((options.selectionWidth - 80) / 2)))
                     // 44 represents the height of the hint + padding
-                    .css('top', px(frame_y + ((size[1] - 44)/2)))
+                    .css('top', px(position_top + ((options.selectionHeight - 44)/2)))
                     .css('font-size', '14px')
                     .css('width', '70px')
                     .css('height', '34px')
@@ -211,11 +219,8 @@
                 });
 
                 $wrapper.append($hint);
-
             }
-
             $origimg.replaceWith($anchor);
-
         }
 
         function handleDrag(event, ui) {
@@ -231,8 +236,8 @@
                 offset_y += current_top;
             }
 
-            x = $img.width() - (offset_x + size[0]);
-            y = $img.height() - (offset_y + size[1]);
+            x = $img.width() >= options.selectionWidth ? $img.width() - (offset_x + size[0]) : 0;
+            y = $img.height() >= options.selectionHeight ? $img.height() - (offset_y + size[1]) : 0;
 
             Coords.setSelectionOrigin([x, y]);
         }
@@ -254,6 +259,7 @@
                 cursor: options.cursor,
                 drag: handleDrag
             });
+
             $(document).scroll(function () {
                 $(document).trigger("mouseup");
             });
@@ -272,9 +278,7 @@
                     $(this).css('top', px(current_top + parseInt($(this).css('top'), 10)));
                 });
             }
-
             allowMove(options.allowMove && draggable);
-
         }
 
         function updateImage(url) {
@@ -282,22 +286,20 @@
             // make sure there is no binding
             $origimg.unbind();
 
+            $origimg.attr('src', '');
+
             options.cursor = 'move';
             opt.selectionOriginX = 0;
             opt.selectionOriginY = 0;
 
             $origimg.load(function () {
-                
                 $origimg.unbind();
-
                 cloneImage();
-
             });
-            
+
             $origimg.attr('src', url);
             $origimg.hide();
             $anchor.replaceWith($origimg);
-
         }
 
         var api = {
@@ -327,7 +329,7 @@
         selectionWidth: 300,
         selectionOriginX: 0,
         selectionOriginY: 0,
-        
+
         // cursor
         cursor: 'move',
 
