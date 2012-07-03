@@ -169,7 +169,7 @@
             $wrapper.width(width + frame_x);
             $wrapper.height(height + frame_y);
             $wrapper.css('cursor', options.cursor);
-            $wrapper.css('clip', 'rect(' + px(frame_y)+ ',' + px(width) + ',' + px(height) + ',' + px(frame_x) + ')');
+            $wrapper.css('clip', 'rect(' + px(frame_y)+ ' ' + px(width) + ' ' + px(height) + ' ' + px(frame_x) + ')');
             $wrapper.css('left', px(-position_left));
             $wrapper.css('top', px(-position_top));
 
